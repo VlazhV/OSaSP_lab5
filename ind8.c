@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			printf("%d created\n", i);
+			printf("thread #%d created\n", i);
 			pt_arr[i] = pt;
 		}
 	}
@@ -247,13 +247,14 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "error: can't join thread %d", i);
 			perror(" ");
 		}
-		if ( retval != 	NULL)
+		else if ( retval != NULL)
 			fprintf(stderr, "thread %d terminated UNsuccessfully\n", i);
-			
+		else
+			printf("thread #%d terminated\n", i);
+		
 	}
 	
 	
-
 	free(buf1);
 	free(buf2);
 	
