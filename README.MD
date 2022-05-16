@@ -11,4 +11,4 @@ ind task:
 		if concurrence : print :  f1_pos f2_pos len
 
 		args : file1, file2, N - max number of threads in time, fileout
-	
+
