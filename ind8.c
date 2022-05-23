@@ -37,7 +37,7 @@ void *thread_check(void *data)
 				while (info->buf_sep[++i] == info->buf_full[++j])
 					++len;
 					
-				fprintf(fout, "Macth [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld \n", curr_char, curr_char, i_save, j_save, len);
+				fprintf(fout, "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld \n", curr_char, curr_char, i_save, j_save, len);
 				
 				i = i_save;
 				j = j_save;
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 	
 	if (argc != 5)
 	{
-		fprintf(stderr, "./ind8.exe file1 file2 N fileout");
+		fprintf(stderr, "./ind8.exe file1 file2 N fileout\n");
 		return -1;
 	}
 	
