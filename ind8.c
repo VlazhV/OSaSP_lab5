@@ -3,17 +3,22 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <string.h>
 
+
+#define FORMAT "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld\n"
+#define FORMAT_LEN 62
 
 typedef struct 
 {
 	char *buf_sep;
 	size_t buf_sep_size;
+	int sep_block_num;
 	
 	char *buf_full;
 	size_t buf_full_size;
 	
-	FILE *f_out;
+//	FILE *f_out;
 }thread_info;
 
 
@@ -22,7 +27,29 @@ void *thread_check(void *data)
 {
 	thread_info *info = (thread_info *)data;
 	
-	FILE *fout = info->f_out;
+//	FILE *fout = info->f_out;
+	
+	
+	int added = 0;
+	int rows = 1;
+	
+	char *res = (char *)calloc(FORMAT_LEN, 1);
+	if (res == NULL)
+	{
+		fprintf(stderr, "%lu : calloc() failed", pthread_self());
+		perror(" ");
+		pthread_exit(NULL);
+	}
+	
+	
+	char *add = (char *)calloc(FORMAT_LEN, 1);
+	if (add == NULL)
+	{
+		fprintf(stderr, "%lu : calloc() failed", pthread_self());
+		perror(" ");
+		pthread_exit(NULL);
+	}
+	
 	
 	for (size_t i = 0; i < info->buf_sep_size; ++i)
 	{
@@ -37,7 +64,22 @@ void *thread_check(void *data)
 				while (info->buf_sep[++i] == info->buf_full[++j])
 					++len;
 					
-				fprintf(fout, "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld \n", curr_char, curr_char, i_save, j_save, len);
+				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save + info->sep_block_num * info->buf_sep_size, len );
+				res = strcat(res, add);
+
+				if (++added == rows)
+				{
+					rows *= 2;
+					res = realloc(res, rows * FORMAT_LEN);
+					if  (res == NULL)
+					{
+						fprintf(stderr, "%lu : realloc() failed", pthread_self());
+						perror(" ");
+						pthread_exit((int *) -1);
+					}
+				}
+				
+//				fprintf(fout, "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld \n", curr_char, curr_char, i_save, j_save, len);
 				
 				i = i_save;
 				j = j_save;
@@ -45,7 +87,10 @@ void *thread_check(void *data)
 		}
 		
 	}
-	pthread_exit(0);
+	
+	free(add);
+//	fputs(res, fout);
+	pthread_exit((char *)res);
 }
 
 
@@ -146,12 +191,7 @@ int main(int argc, char *argv[])
 	if (nThreads == -1)
 		return -1;
 		
-	FILE *f_out = fopen(argv[4], "w");
-	if (f_out == NULL)
-	{
-		perror ("error : can't open fileout");
-		return -1;
-	}
+	
 	
 	char *buf1, *buf2;
 	
@@ -198,15 +238,13 @@ int main(int argc, char *argv[])
 		}
 	}
 			
-	int res;	
+	int res;
 
 	pthread_t pt_arr[nThreads];
 	
 	for (int i = 0; i < nThreads; ++i)
 	{
 		pthread_t pt;
-		
-		
 		
 		
 		thread_info *info = (thread_info*)calloc(1, sizeof(thread_info));
@@ -220,7 +258,8 @@ int main(int argc, char *argv[])
 		info->buf_sep_size = blocksize;
 		info->buf_full = fullfile;
 		info->buf_full_size = fullfilesize;
-		info->f_out = f_out;
+		info->sep_block_num = i;
+//		info->f_out = f_out;
 		
 		res = pthread_create(&pt, NULL, &thread_check, info);
 		if (res != 0)
@@ -230,14 +269,16 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			printf("thread #%d created\n", i);
+			printf("#%d %lu created\n", i, pt);
 			pt_arr[i] = pt;
 		}
 	}
 	
 	
-
 	void *retval;
+	char *res_str = calloc(1, 1);
+	char *add = NULL;
+	
 	for (int i = 0; i < nThreads; ++i)
 	{
 		res = pthread_join(pt_arr[i], &retval);
@@ -247,13 +288,48 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "error: can't join thread %d", i);
 			perror(" ");
 		}
-		else if ( retval != NULL)
-			fprintf(stderr, "thread %d terminated UNsuccessfully\n", i);
+		else if ( retval == NULL)
+			fprintf(stderr, "#%d %lu terminated UNsuccessfully\n", i, pt_arr[i]);
 		else
-			printf("thread #%d terminated\n", i);
+		{
+			printf("#%d %lu terminated\n", i, pt_arr[i]);
+			add = (char *) retval;
+//			printf("==========%d===========\n", i);
+//			puts(add);
+//			printf("=======================\n\n");
+			
+			size_t old_len = strlen(res_str);
+			
+			res_str = realloc(res_str,  old_len +  strlen(add) + 1);
+			if (res_str == NULL)
+			{
+				perror ("main : realloc() failed");
+				return -1;
+			}
+			
+			res_str = strcat(res_str, add);
+		}
 		
 	}
 	
+//	puts(res_str);
+	
+	if (res_str == NULL)
+		return -1;
+	
+	
+	FILE *f_out = fopen(argv[4], "w");
+	if (f_out == NULL)
+	{
+		perror ("error : can't open fileout");
+		return -1;
+	}
+	
+	
+	fputs(res_str, f_out);
+	
+	free(res_str);
+	free(add);
 	
 	free(buf1);
 	free(buf2);

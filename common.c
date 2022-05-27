@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/types.h>
 
 #include "mytime.c"
 
@@ -11,7 +12,7 @@ void *thread_fun(void* _)
 	char *tmBuf = (char*)calloc(TIME_MAX, 1);
 	myTime(tmBuf);
 	
-	printf("pid = %d, tid = %d\t\t\t%s\n", getpid(), gettid(), tmBuf != NULL ? tmBuf : "time error");
+	printf("pid = %d\ttid = %d\tthread_self = %lu\t%s\n", getpid(), gettid(), pthread_self(),tmBuf != NULL ? tmBuf : "time error");
 		
 	//sleep(10);
 	pthread_exit(0);
@@ -22,7 +23,7 @@ int main()
 	char *tmBuf = (char*)calloc(TIME_MAX, 1);
 	myTime(tmBuf);
 	
-	printf("pid = %d, ppid = %d, tid = %d\t%s\n", getpid(), getppid(), gettid(), tmBuf != NULL ? tmBuf : "time error");
+	printf("pid = %d\ttid = %d\tthread_self = %lu\t%s\n", getpid(), gettid(), pthread_self(),tmBuf != NULL ? tmBuf : "time error");
 	
 	pthread_t pt1, pt2;
 

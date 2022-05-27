@@ -1,4 +1,5 @@
 #include <time.h>
+
 #define TIME_MAX 12
 
 char *myTime(char *tmBuf)
@@ -26,7 +27,7 @@ char *myTime(char *tmBuf)
 		return NULL;
 	}
 		
-	if (sprintf(tmBuf, "%d:%d:%d:%d", hms->tm_hour, hms->tm_min, hms->tm_sec, (int)mtime.tv_nsec/1000) < 0)
+	if (sprintf(tmBuf, "%02d:%02d:%02d:%06d", hms->tm_hour, hms->tm_min, hms->tm_sec, (int)mtime.tv_nsec/1000) < 0)
 	{
 		perror("error mT2 : sprintf() failed");
 		return NULL;
