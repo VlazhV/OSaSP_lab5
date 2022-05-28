@@ -61,7 +61,7 @@ void *thread_check(void *data)
 				size_t len = 1;
 				size_t i_save = i, j_save = j;
 
-				while (info->buf_sep[++i] == info->buf_full[++j] && (info->buf_sep[i] != '\0'))
+				while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
 					++len;
 					
 				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save, len );
@@ -101,6 +101,7 @@ size_t readfile(char *filename, char **buf)
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
 	{
+		fprintf(stderr, "%s : ", filename);
 		perror("error rf1: can't open file");
 		return -1;
 	}
@@ -108,6 +109,7 @@ size_t readfile(char *filename, char **buf)
 	res = fseek(f, 0, SEEK_END);
 	if (res == -1)
 	{
+		fprintf(stderr, "%s : ", filename);
 		perror("error rf2: can't fseek");
 		return -1;
 	}
@@ -115,6 +117,7 @@ size_t readfile(char *filename, char **buf)
 	size_t filesize = ftell(f);
 	if (filesize == -1)
 	{
+		fprintf(stderr, "%s : ", filename);
 		perror("error rf3: can't ftell");
 		return -1;
 	}
@@ -124,6 +127,7 @@ size_t readfile(char *filename, char **buf)
 	*buf = (char*)calloc(filesize, 1);
 	if (*buf == NULL)
 	{
+		fprintf(stderr, "%s : ", filename);
 		perror("error rf4: can't alloc mem for buff");
 		return -1;
 	}
@@ -134,6 +138,7 @@ size_t readfile(char *filename, char **buf)
 	res = fclose(f);
 	if (res != 0)
 	{
+		fprintf(stderr, "%s : ", filename);
 		perror("error rf5 : can't close file");
 		return -1;
 	}
