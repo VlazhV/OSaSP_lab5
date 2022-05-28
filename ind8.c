@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-#define FORMAT "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld\n"
+#define FORMAT "Match [%u - '%c']: file1 = %ld  ---- file2 = %ld ---- len = %ld\n"
 #define FORMAT_LEN 62
 
 typedef struct 
@@ -61,10 +61,10 @@ void *thread_check(void *data)
 				size_t len = 1;
 				size_t i_save = i, j_save = j;
 
-				while (info->buf_sep[++i] == info->buf_full[++j])
+				while (info->buf_sep[++i] == info->buf_full[++j] && (info->buf_sep[i] != '\0'))
 					++len;
 					
-				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save + info->sep_block_num * info->buf_sep_size, len );
+				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save, len );
 				res = strcat(res, add);
 
 				if (++added == rows)
@@ -219,6 +219,7 @@ int main(int argc, char *argv[])
 		{
 			puts("number of threads less than size of any file\nnumber of threads will be size of file1");
 			printf("N = %ld", buf1size);
+			nThreads = buf1size;
 			blocksize = 1;
 		}
 		else
@@ -228,6 +229,8 @@ int main(int argc, char *argv[])
 			{
 				puts("number of threads less than size of any file\nnumber of threads will be size of file2");
 				printf("N = %ld", buf2size);
+				nThreads = buf2size;
+				
 				blocksize = 1;
 				sepfile = buf2;
 				sepfilesize = buf2size;
@@ -237,7 +240,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-			
+	
+	
 	int res;
 
 	pthread_t pt_arr[nThreads];
