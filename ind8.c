@@ -5,9 +5,12 @@
 #include <errno.h>
 #include <string.h>
 
+#include "list.c"
+
 
 #define FORMAT "Match [%u - '%c']: file1 = %ld  ---- file2 = %ld ---- len = %ld\n"
 #define FORMAT_LEN 62
+#define MIN_WORD_LEN 3
 
 typedef struct 
 {
@@ -27,70 +30,53 @@ void *thread_check(void *data)
 {
 	thread_info *info = (thread_info *)data;
 	
-//	FILE *fout = info->f_out;
+	node *head = list_ini();
+	if (head == NULL)
+		return NULL; //ERROR
 	
-	
-	int added = 0;
-	int rows = 1;
-	
-	char *res = (char *)calloc(FORMAT_LEN, 1);
-	if (res == NULL)
-	{
-		fprintf(stderr, "%lu : calloc() failed", pthread_self());
-		perror(" ");
-		pthread_exit(NULL);
-	}
-	
-	
-	char *add = (char *)calloc(FORMAT_LEN, 1);
-	if (add == NULL)
-	{
-		fprintf(stderr, "%lu : calloc() failed", pthread_self());
-		perror(" ");
-		pthread_exit(NULL);
-	}
-	
+	int curr_char;
+	int res;
+	node *resp;
 	
 	for (size_t i = 0; i < info->buf_sep_size; ++i)
 	{
-		char curr_char = info->buf_sep[i];
+		curr_char = info->buf_sep[i];
+		
 		for (size_t j = 0; j < info->buf_full_size; ++j)
 		{
 			if (curr_char == info->buf_full[j])
 			{
-				size_t len = 1;
-				size_t i_save = i, j_save = j;
-
-				while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
-					++len;
+				res = list_check(head, i, j);
+				if (res == -1)
+					return NULL;
 					
-				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save, len );
-				res = strcat(res, add);
-
-				if (++added == rows)
+				if (res == 0)
 				{
-					rows *= 2;
-					res = realloc(res, rows * FORMAT_LEN);
-					if  (res == NULL)
+					size_t i_save = i;
+					size_t j_save = j;
+					size_t len = 0;
+					
+					while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
+						++len;
+						
+					if (len >= MIN_WORD_LEN)
 					{
-						fprintf(stderr, "%lu : realloc() failed", pthread_self());
-						perror(" ");
-						pthread_exit((int *) -1);
+						resp = list_add(head, i_save, j_save, len);
+						if (resp == NULL)
+							return NULL;
 					}
+											
 				}
-				
-//				fprintf(fout, "Match [%u - %c]: file1 = %ld  ---- file2 = %ld ---- len = %ld \n", curr_char, curr_char, i_save, j_save, len);
-				
-				i = i_save;
-				j = j_save;
+				else
+				{
+					j += res - 1;
+					continue;
+				}
 			}
 		}
 		
+		return head;
 	}
-	
-	free(add);
-//	fputs(res, fout);
-	pthread_exit((char *)res);
 }
 
 
@@ -131,9 +117,16 @@ size_t readfile(char *filename, char **buf)
 		perror("error rf4: can't alloc mem for buff");
 		return -1;
 	}
-	
+
+	int c;
 	for (size_t i = 0; i < filesize; ++i)
-		(*buf)[i] = getc(f);
+	{
+		c = getc(f);
+		if (c != EOF)
+			(*buf)[i];
+		else
+			return -1;
+	}
 		
 	res = fclose(f);
 	if (res != 0)
@@ -145,6 +138,8 @@ size_t readfile(char *filename, char **buf)
 	
 	return filesize;
 }
+
+
 
 int convertN (char *strN)
 {
@@ -351,3 +346,69 @@ int main(int argc, char *argv[])
 	}
 	return 0;
 }
+
+
+thread_info *info = (thread_info *)data;
+	
+//	FILE *fout = info->f_out;
+	
+//	
+//	int added = 0;
+//	int rows = 1;
+//	
+//	char *res = (char *)calloc(FORMAT_LEN, 1);
+//	if (res == NULL)
+//	{
+//		fprintf(stderr, "%lu : calloc() failed", pthread_self());
+//		perror(" ");
+//		pthread_exit(NULL);
+//	}
+//	
+//	
+//	char *add = (char *)calloc(FORMAT_LEN, 1);
+//	if (add == NULL)
+//	{
+//		fprintf(stderr, "%lu : calloc() failed", pthread_self());
+//		perror(" ");
+//		pthread_exit(NULL);
+//	}
+//	
+//	
+//	for (size_t i = 0; i < info->buf_sep_size; ++i)
+//	{
+//		char curr_char = info->buf_sep[i];
+//		for (size_t j = 0; j < info->buf_full_size; ++j)
+//		{
+//			if (curr_char == info->buf_full[j])
+//			{
+//				size_t len = 1;
+//				size_t i_save = i, j_save = j;
+//
+//				while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
+//					++len;
+//					
+//				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save, len );
+//				res = strcat(res, add);
+//
+//				if (++added == rows)
+//				{
+//					rows *= 2;
+//					res = realloc(res, rows * FORMAT_LEN);
+//					if  (res == NULL)
+//					{
+//						fprintf(stderr, "%lu : realloc() failed", pthread_self());
+//						perror(" ");
+//						pthread_exit((int *) -1);
+//					}
+//				}
+//				
+//				i = i_save;
+//				j = j_save;
+//			}
+//		}
+//		
+//	}
+//	
+//	free(add);
+//
+//	pthread_exit((char *)res);
