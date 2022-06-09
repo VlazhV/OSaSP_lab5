@@ -4,11 +4,12 @@
 #include <pthread.h>
 #include <errno.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "list.c"
 
 
-#define FORMAT "Match [%u - '%c']: file1 = %ld  ---- file2 = %ld ---- len = %ld\n"
+
 #define FORMAT_LEN 62
 #define MIN_WORD_LEN 3
 
@@ -32,51 +33,67 @@ void *thread_check(void *data)
 	
 	node *head = list_ini();
 	if (head == NULL)
-		return NULL; //ERROR
+		pthread_exit(NULL); //ERROR
+	
 	
 	int curr_char;
 	int res;
 	node *resp;
 	
+	
+	
 	for (size_t i = 0; i < info->buf_sep_size; ++i)
 	{
 		curr_char = info->buf_sep[i];
+		
+		if (!isalnum(curr_char))
+			continue;
+		
 		
 		for (size_t j = 0; j < info->buf_full_size; ++j)
 		{
 			if (curr_char == info->buf_full[j])
 			{
-				res = list_check(head, i, j);
+				res = list_check(head, i + info->buf_sep_size * info->sep_block_num, j);
 				if (res == -1)
-					return NULL;
+					pthread_exit(NULL);
 					
 				if (res == 0)
 				{
 					size_t i_save = i;
 					size_t j_save = j;
-					size_t len = 0;
+					size_t len = 1;
 					
-					while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
+					while (i < info->buf_sep_size && j < info->buf_full_size 
+							&& 
+							info->buf_sep[++i] == info->buf_full[++j] 
+							&& 
+							isalnum(info->buf_sep[i])
+							)
 						++len;
 						
 					if (len >= MIN_WORD_LEN)
 					{
-						resp = list_add(head, i_save, j_save, len);
+						resp = list_add_tail(head, info->buf_sep[i_save], i_save + info->buf_sep_size * info->sep_block_num, j_save, len);
+	//					printf("#%d list_add\n", info->sep_block_num);
 						if (resp == NULL)
-							return NULL;
+							pthread_exit(NULL);
 					}
-											
+					
+					i = i_save;
+					j = j_save;
 				}
 				else
 				{
+		//			printf("res = %d\n", res);
 					j += res - 1;
 					continue;
 				}
 			}
 		}
-		
-		return head;
 	}
+	//puts("EXIT");
+	pthread_exit(head);
 }
 
 
@@ -123,7 +140,7 @@ size_t readfile(char *filename, char **buf)
 	{
 		c = getc(f);
 		if (c != EOF)
-			(*buf)[i];
+			(*buf)[i] = c;
 		else
 			return -1;
 	}
@@ -168,7 +185,7 @@ int convertN (char *strN)
 	
 	if (N <= 0)
 	{
-		fprintf(stderr, "error cn3: max count of processes-children must be a positive value\n");
+		fprintf(stderr, "error cn3: max count of thread-children must be a positive value\n");
 		return -1;
 	}
 	
@@ -204,12 +221,16 @@ int main(int argc, char *argv[])
 	if (buf2size == -1)
 		return -1;
 		
+	
+		
 	size_t blocksize = buf1size / nThreads;
 	
 	char *sepfile = buf1;
+	char *sepfilename = argv[1];
 	size_t sepfilesize = buf1size;
 	
 	char *fullfile = buf2;
+	char *fullfilename = argv[2];
 	size_t fullfilesize = buf2size;
 	
 	
@@ -234,9 +255,11 @@ int main(int argc, char *argv[])
 				blocksize = 1;
 				sepfile = buf2;
 				sepfilesize = buf2size;
+				sepfilename = argv[2];
 				
 				fullfile = buf1;
 				fullfilesize = buf1size;
+				fullfilename = argv[1];
 			}
 		}
 	}
@@ -278,10 +301,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	
+	node *head = NULL;
+	node *next_head = NULL;
 	void *retval;
-	char *res_str = calloc(1, 1);
-	char *add = NULL;
+	
 	
 	for (int i = 0; i < nThreads; ++i)
 	{
@@ -296,32 +319,22 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "#%d %lu terminated UNsuccessfully\n", i, pt_arr[i]);
 		else
 		{
-			printf("#%d %lu terminated\n", i, pt_arr[i]);
-			add = (char *) retval;
-//			printf("==========%d===========\n", i);
-//			puts(add);
-//			printf("=======================\n\n");
-			
-			size_t old_len = strlen(res_str);
-			
-			res_str = realloc(res_str,  old_len +  strlen(add) + 1);
-			if (res_str == NULL)
+			printf ("#%d %lu terminated successfully\n", i, pt_arr[i]);
+			if (head == NULL)			
+				head =(node*)retval;
+			else
 			{
-				perror ("main : realloc() failed");
-				return -1;
+				next_head = (node*)retval;
+				list_concat(head, next_head);
 			}
-			
-			res_str = strcat(res_str, add);
+				
 		}
 		
 	}
 	
 //	puts(res_str);
-	
-	if (res_str == NULL)
-		return -1;
-	
-	
+
+
 	FILE *f_out = fopen(argv[4], "w");
 	if (f_out == NULL)
 	{
@@ -330,14 +343,11 @@ int main(int argc, char *argv[])
 	}
 	
 	
-	fputs(res_str, f_out);
-	
-	free(res_str);
-	free(add);
+	list_print(f_out, head, sepfilename, fullfilename);
 	
 	free(buf1);
 	free(buf2);
-	
+//		
 	res = fclose(f_out);
 	if (res != 0)
 	{
@@ -348,7 +358,7 @@ int main(int argc, char *argv[])
 }
 
 
-thread_info *info = (thread_info *)data;
+//thread_info *info = (thread_info *)data;
 	
 //	FILE *fout = info->f_out;
 	
