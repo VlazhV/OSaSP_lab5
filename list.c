@@ -115,13 +115,13 @@ int list_check(node *head, size_t position1, size_t position2)
 	 			 && (node_elem->pos2 <= position2 && position2 <= node_elem->pos2 + node_elem->len);
 				 
 		
+		if (found)
+			return node_elem->len;
 		
 		node_elem = node_elem->next;
-	}
+	}	
+	return 0;
 	
-	if (!found || node_elem == NULL)
-		return 0;
-	return node_elem->len;
 }
 
 
