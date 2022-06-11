@@ -8,9 +8,6 @@
 
 #include "list.c"
 
-
-
-#define FORMAT_LEN 62
 #define MIN_WORD_LEN 3
 
 typedef struct 
@@ -22,7 +19,6 @@ typedef struct
 	char *buf_full;
 	size_t buf_full_size;
 	
-//	FILE *f_out;
 }thread_info;
 
 
@@ -75,7 +71,6 @@ void *thread_check(void *data)
 					if (len >= MIN_WORD_LEN)
 					{
 						resp = list_add_tail(head, info->buf_sep[i_save], i_save + info->buf_sep_size * info->sep_block_num, j_save, len);
-	//					printf("#%d list_add\n", info->sep_block_num);
 						if (resp == NULL)
 							pthread_exit(NULL);
 					}
@@ -85,14 +80,12 @@ void *thread_check(void *data)
 				}
 				else
 				{
-		//			printf("res = %d\n", res);
 					j += res - 1;
 					continue;
 				}
 			}
 		}
 	}
-	//puts("EXIT");
 	pthread_exit(head);
 }
 
@@ -286,7 +279,6 @@ int main(int argc, char *argv[])
 		info->buf_full = fullfile;
 		info->buf_full_size = fullfilesize;
 		info->sep_block_num = i;
-//		info->f_out = f_out;
 		
 		res = pthread_create(&pt, NULL, &thread_check, info);
 		if (res != 0)
@@ -331,8 +323,6 @@ int main(int argc, char *argv[])
 		}
 		
 	}
-	
-//	puts(res_str);
 
 
 	FILE *f_out = fopen(argv[4], "w");
@@ -344,6 +334,7 @@ int main(int argc, char *argv[])
 	
 	
 	list_print(f_out, head, sepfilename, fullfilename);
+	list_clear(head);
 	
 	free(buf1);
 	free(buf2);
@@ -356,69 +347,3 @@ int main(int argc, char *argv[])
 	}
 	return 0;
 }
-
-
-//thread_info *info = (thread_info *)data;
-	
-//	FILE *fout = info->f_out;
-	
-//	
-//	int added = 0;
-//	int rows = 1;
-//	
-//	char *res = (char *)calloc(FORMAT_LEN, 1);
-//	if (res == NULL)
-//	{
-//		fprintf(stderr, "%lu : calloc() failed", pthread_self());
-//		perror(" ");
-//		pthread_exit(NULL);
-//	}
-//	
-//	
-//	char *add = (char *)calloc(FORMAT_LEN, 1);
-//	if (add == NULL)
-//	{
-//		fprintf(stderr, "%lu : calloc() failed", pthread_self());
-//		perror(" ");
-//		pthread_exit(NULL);
-//	}
-//	
-//	
-//	for (size_t i = 0; i < info->buf_sep_size; ++i)
-//	{
-//		char curr_char = info->buf_sep[i];
-//		for (size_t j = 0; j < info->buf_full_size; ++j)
-//		{
-//			if (curr_char == info->buf_full[j])
-//			{
-//				size_t len = 1;
-//				size_t i_save = i, j_save = j;
-//
-//				while (info->buf_sep[++i] == info->buf_full[++j] && i < info->buf_sep_size && j < info->buf_full_size)
-//					++len;
-//					
-//				sprintf(add, FORMAT, curr_char, curr_char, i_save + info->sep_block_num * info->buf_sep_size, j_save, len );
-//				res = strcat(res, add);
-//
-//				if (++added == rows)
-//				{
-//					rows *= 2;
-//					res = realloc(res, rows * FORMAT_LEN);
-//					if  (res == NULL)
-//					{
-//						fprintf(stderr, "%lu : realloc() failed", pthread_self());
-//						perror(" ");
-//						pthread_exit((int *) -1);
-//					}
-//				}
-//				
-//				i = i_save;
-//				j = j_save;
-//			}
-//		}
-//		
-//	}
-//	
-//	free(add);
-//
-//	pthread_exit((char *)res);
